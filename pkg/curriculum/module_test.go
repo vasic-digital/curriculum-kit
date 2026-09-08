@@ -1,6 +1,7 @@
 package curriculum
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -211,5 +212,83 @@ func TestVideoAnchorWireFormIsMilliseconds(t *testing.T) {
 	want := `{"chapterId":"ch","startMillis":1500,"endMillis":4500,"transcriptAnchor":"seg-1"}`
 	if string(b) != want {
 		t.Fatalf("wire form = %s, want %s", b, want)
+	}
+}
+
+// A LESSON'S TEACHING CONTENT SURVIVES THE ROUND TRIP, AND IS NOT ITS SUMMARY.
+//
+// The defect this pins is not a crash. A model with a Summary and no Body reads
+// as complete — every lesson has a title, an estimate and links — while the text
+// the lesson exists to deliver has nowhere to live, so an authoring pipeline
+// that HAS that text drops it with nothing anywhere saying so. That is exactly
+// how it was lost: the material was parsed, measured for a reading estimate, and
+// then discarded because there was no field to put it in.
+func TestLessonBodyIsCarriedAndIsDistinctFromSummary(t *testing.T) {
+	const body = "Two paragraphs of teaching text.\n\nThe second one."
+	in := Document{Catalog: Catalog{
+		ID: "c", Title: "T", Version: "1",
+		Areas: []Area{{ID: "a", Title: "A", Lessons: []Lesson{{
+			ID: "l", AreaID: "a", Title: "L", Summary: "one line", Body: body,
+		}}}},
+	}}
+	b, err := json.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"body"`) {
+		t.Fatalf("Lesson.Body did not reach the wire: %s", b)
+	}
+	out, err := DecodeDocument(bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := out.Catalog.Areas[0].Lessons[0]
+	if got.Body != body {
+		t.Fatalf("body did not round-trip: got %q want %q", got.Body, body)
+	}
+	// The two fields are independent. If Body were merely an alias for Summary,
+	// this assertion would pass by accident; it is here so that folding them
+	// together later fails loudly instead of silently truncating every lesson to
+	// its blurb.
+	if got.Summary == got.Body {
+		t.Fatalf("summary and body collapsed into one value: %q", got.Summary)
+	}
+
+	// A lesson carrying only a summary has an EMPTY body, not a copy of it.
+	// This is the state the consumer's own gate exists to catch, so the model
+	// must represent it faithfully rather than papering over it.
+	only, err := DecodeDocument(strings.NewReader(
+		`{"catalog":{"id":"c","title":"T","version":"1","areas":[{"id":"a","title":"A",` +
+			`"lessons":[{"id":"l","areaId":"a","title":"L","summary":"one line","ord":0}],` +
+			`"assessment":null}]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := only.Catalog.Areas[0].Lessons[0].Body; got != "" {
+		t.Fatalf("absent body decoded as %q, not empty", got)
+	}
+}
+
+// Validate deliberately does NOT report an empty body — requiring one is a
+// consumer's policy, not this package's (see Lesson.Body). This test states that
+// choice so that adding such a rule later has to change a test that explains
+// why it was absent, rather than looking like an oversight being corrected.
+func TestValidateDoesNotRequireALessonBody(t *testing.T) {
+	c := Catalog{ID: "c", Title: "T", Version: "1", Areas: []Area{{
+		ID: "a", Title: "A",
+		Lessons: []Lesson{{ID: "l", AreaID: "a", Title: "L", Ord: 0}},
+		Assessment: &Assessment{
+			ID: "as", AreaID: "a", Title: "Test", RequiredLessons: []ID{"l"}, PassPercent: 50,
+			Questions: []Question{{
+				ID: "q", Kind: KindSingle, Prompt: "P", Points: 1,
+				Choices:        []Choice{{ID: "c1", Text: "x"}, {ID: "c2", Text: "y"}},
+				CorrectChoices: []ID{"c1"},
+			}},
+		},
+	}}}
+	for _, f := range ValidateWith(c, Options{KnownChapters: map[ID]bool{}}).Findings {
+		if strings.Contains(strings.ToLower(f.Message), "body") {
+			t.Fatalf("Validate reported a body rule it does not own: %v", f)
+		}
 	}
 }

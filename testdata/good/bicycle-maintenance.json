@@ -15,6 +15,7 @@
             "areaId": "area-brakes",
             "title": "Anatomy of a rim brake",
             "summary": "Lever, cable, arms, pads, rim.",
+            "body": "A rim brake is a lever, a cable, two arms, two pads and the rim they close on. Pulling the lever shortens the cable; the arms rotate inward; the pads meet the rim and turn the wheel's motion into heat.\n\nWork through the parts in that order and every later symptom has an obvious first place to look: a spongy lever is nearly always cable, and a brake that grabs on one side only is nearly always arm-spring balance.",
             "ord": 1,
             "estimatedMinutes": 12,
             "materials": [

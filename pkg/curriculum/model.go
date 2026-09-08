@@ -136,9 +136,36 @@ type Lesson struct {
 	// as implied by nesting so that a consumer which flattens the tree into rows
 	// — every consumer with a database does — keeps the edge, and so that
 	// Validate can catch a lesson filed under an area it does not claim.
-	AreaID           ID         `json:"areaId"`
-	Title            string     `json:"title"`
-	Summary          string     `json:"summary,omitempty"`
+	AreaID ID     `json:"areaId"`
+	Title  string `json:"title"`
+	// Summary is the one-line orientation shown BESIDE the title in a list of
+	// lessons. It is not the teaching content and must not be used as it: a
+	// renderer that shows a summary where a body belongs shows a learner the
+	// blurb for a lesson whose text they can then never reach.
+	Summary string `json:"summary,omitempty"`
+	// Body is the teaching content — the text a learner actually reads, and the
+	// reason the lesson exists.
+	//
+	// It is a separate field from Summary because the two are answers to
+	// different questions ("should I read this?" and "what does it teach?"), and
+	// because a model that offers only the first makes the second unexpressible.
+	// A catalog whose lessons carry titles, minutes and links but no body is a
+	// table of contents presented as a course, and nothing in the type system
+	// says so — this field is what makes the difference statable.
+	//
+	// It is OPAQUE MARKED-UP TEXT. This package neither parses nor renders it,
+	// makes no claim about its dialect, and imposes no length: an author decides
+	// what a lesson says, and a consumer decides how it is drawn. A body that is
+	// genuinely short stays short — padding one to look substantial is a worse
+	// defect than a thin lesson, because it is not visible as one.
+	//
+	// It is OPTIONAL here on purpose. A lesson that is wholly a set of materials
+	// — one video range, nothing else — is a legitimate lesson, so requiring a
+	// body for every lesson in every catalog is a POLICY a consuming curriculum
+	// may adopt and this package may not impose. Validate therefore does not
+	// report an empty body; a consumer that requires one enforces it in its own
+	// gate, against its own content.
+	Body             string     `json:"body,omitempty"`
 	Ord              int        `json:"ord"`
 	EstimatedMinutes int        `json:"estimatedMinutes,omitempty"`
 	Materials        []Material `json:"materials,omitempty"`
