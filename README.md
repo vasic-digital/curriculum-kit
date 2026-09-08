@@ -1,7 +1,7 @@
 # curriculum-kit
 
-**Revision:** 1
-**Last modified:** 2026-09-07
+**Revision:** 2
+**Last modified:** 2026-09-08
 
 A project-not-aware content model and assessment mechanism for structured
 learning, in Go, with an empty dependency set.
@@ -150,11 +150,17 @@ nothing`), and deleting the good fixtures took the plain gate to exit 2.
 
 Stated plainly, because an unstated gap reads as a finished feature.
 
-- **No consumer is wired to this module.** Nothing imports it. It has not been
-  integrated into any application, and no application's data has been migrated
-  into these types. Whether the model fits a real catalog is **UNDETERMINED**;
-  it was designed from a structural reading of an existing implementation, not
-  from a migration.
+- **No consumer is wired to this module IN COMMITTED CODE, and the claim is now
+  narrower than it was.** Measured 2026-09-08: one application in a private
+  repository of this fleet imports `pkg/curriculum` from SIX files — five of
+  them untracked, and the sixth a tracked file whose COMMITTED revision does
+  not carry the import. That consumer's own `go.mod` does not require this
+  module at `HEAD` either: the require and the replace are uncommitted too.
+  So the honest statement is: an integration is being written in a working
+  tree, nothing about it is committed anywhere, and
+  no application's data has been migrated into these types. Whether the model
+  fits a real catalog is still **UNDETERMINED**; it was designed from a
+  structural reading of an existing implementation, not from a migration.
 - **No frontend.** The module publishes a JSON shape; no component renders it,
   and no TypeScript types are generated from it. A consumer writes its own.
 - **No transcript rendering, no player.** `VideoAnchor` carries what a consumer
@@ -172,9 +178,18 @@ Stated plainly, because an unstated gap reads as a finished feature.
   doubling review intervals) is not ported.
 - **No ordering or prerequisite graph between AREAS.** The gate is within an
   area only.
-- **Not published, not tagged, not a submodule.** This is a plain directory. It
-  has never been pushed to either upstream, and the upstream recipes name
-  repositories that may not exist yet.
+- **Published 2026-09-08; still not tagged.** The claim this bullet used to
+  carry — *"not published, not a submodule; this is a plain directory that has
+  never been pushed"* — is WITHDRAWN as of the first publication commit, and is
+  quoted here so a stale reading is recognisable rather than trusted. What is
+  true now: this is a git repository on branch `main`, published PUBLIC at
+  `github.com/vasic-digital/curriculum-kit`, mounted as a gitlink in the
+  consuming umbrella and declared in its dependency manifest with a real ref.
+  **No tag exists**, so a consumer pinning this module pins a sha, and
+  `go get` resolves it as a pseudo-version. A GitLab mirror was auto-created
+  PRIVATE by the first push and carries the same commit; that is a
+  public-to-private flow and discloses nothing, but it means the mirror's
+  visibility does NOT match this repository's.
 
 ## License
 
