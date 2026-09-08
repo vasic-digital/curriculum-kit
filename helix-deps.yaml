@@ -1,0 +1,17 @@
+# helix-deps.yaml — curriculum-kit Submodule-Dependency Manifest
+# Per HelixConstitution §11.4.31 (Submodule-Dependency-Manifest Mandate).
+#
+# Schema reference: <constitution-submodule>/Constitution.md §11.4.31.
+
+schema_version: 1
+# curriculum-kit is a leaf module with ZERO dependencies of any kind — not even
+# stdlib-external ones. TestNoDependencies fails if a require line appears in
+# go.mod, and the reasoning is recorded in that file's comment block: every
+# consumer inherits whatever this module requires.
+deps: []
+
+transitive_handling:
+  recursive: true
+  conflict_resolution: operator-required
+
+language_specific_subtree: false

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+export UPSTREAMABLE_REPOSITORY="git@gitlab.com:vasic-digital/curriculum-kit.git"

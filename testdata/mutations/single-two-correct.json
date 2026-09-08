@@ -1,0 +1,80 @@
+{
+  "catalog": {
+    "id": "cat-min",
+    "title": "Minimal catalog",
+    "version": "1.0.0",
+    "areas": [
+      {
+        "id": "area-min",
+        "title": "Only area",
+        "ord": 1,
+        "lessons": [
+          {
+            "id": "les-min",
+            "areaId": "area-min",
+            "title": "Only lesson",
+            "ord": 1,
+            "materials": [
+              {
+                "id": "mat-min-diagram",
+                "kind": "diagram",
+                "title": "Only diagram",
+                "uri": "materials/min.svg",
+                "alt": "A single labelled box."
+              },
+              {
+                "id": "mat-min-video",
+                "kind": "video",
+                "title": "Only clip",
+                "uri": "video/chapter-min",
+                "video": {
+                  "chapterId": "chapter-min",
+                  "startMillis": 1000,
+                  "endMillis": 4000,
+                  "transcriptAnchor": "min-seg-0001"
+                }
+              }
+            ]
+          }
+        ],
+        "assessment": {
+          "id": "asm-min",
+          "areaId": "area-min",
+          "title": "Only test",
+          "requiredLessons": [
+            "les-min"
+          ],
+          "passPercent": 50,
+          "questions": [
+            {
+              "id": "q-min",
+              "kind": "single",
+              "prompt": "Is this the only question?",
+              "choices": [
+                {
+                  "id": "ch-min-yes",
+                  "text": "Yes"
+                },
+                {
+                  "id": "ch-min-no",
+                  "text": "No"
+                }
+              ],
+              "correctChoices": [
+                "ch-min-yes",
+                "ch-min-no"
+              ],
+              "points": 1,
+              "explanation": "It is.",
+              "ord": 1
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "chaptersDeclared": true,
+  "knownChapters": [
+    "chapter-min"
+  ]
+}

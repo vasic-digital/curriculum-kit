@@ -1,0 +1,3 @@
+rc=2
+code=parse
+what=a misspelled key must be refused, not silently dropped

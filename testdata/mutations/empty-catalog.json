@@ -1,0 +1,12 @@
+{
+  "catalog": {
+    "id": "cat-min",
+    "title": "Minimal catalog",
+    "version": "1.0.0",
+    "areas": []
+  },
+  "chaptersDeclared": true,
+  "knownChapters": [
+    "chapter-min"
+  ]
+}

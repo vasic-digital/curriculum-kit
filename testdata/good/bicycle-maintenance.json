@@ -1,0 +1,189 @@
+{
+  "catalog": {
+    "id": "cat-bicycle",
+    "title": "Bicycle Maintenance",
+    "version": "1.0.0",
+    "areas": [
+      {
+        "id": "area-brakes",
+        "title": "Rim Brakes",
+        "summary": "How a rim brake converts a lever pull into stopping force, and how to keep it doing that.",
+        "ord": 1,
+        "lessons": [
+          {
+            "id": "les-brakes-anatomy",
+            "areaId": "area-brakes",
+            "title": "Anatomy of a rim brake",
+            "summary": "Lever, cable, arms, pads, rim.",
+            "ord": 1,
+            "estimatedMinutes": 12,
+            "materials": [
+              {
+                "id": "mat-brake-diagram",
+                "kind": "diagram",
+                "title": "Brake assembly, exploded",
+                "caption": "Each part named, with the direction of force marked.",
+                "uri": "materials/brakes/assembly.svg",
+                "alt": "An exploded drawing of a rim brake with lever, cable, two arms, two pads and the wheel rim labelled."
+              },
+              {
+                "id": "mat-brake-illustration",
+                "kind": "illustration",
+                "title": "A worn pad next to a new one",
+                "uri": "materials/brakes/pad-wear.png",
+                "alt": "Two brake pads side by side; the left one has no grooves left, the right one has deep grooves."
+              },
+              {
+                "id": "mat-brake-video-intro",
+                "kind": "video",
+                "title": "Walkthrough of the assembly",
+                "caption": "The named parts, pointed at on a real bicycle.",
+                "uri": "video/chapter-01",
+                "video": {
+                  "chapterId": "chapter-01",
+                  "startMillis": 42000,
+                  "endMillis": 191500,
+                  "transcriptAnchor": "ch01-seg-0007"
+                }
+              }
+            ]
+          },
+          {
+            "id": "les-brakes-adjust",
+            "areaId": "area-brakes",
+            "title": "Centring and tensioning",
+            "ord": 2,
+            "estimatedMinutes": 18,
+            "materials": [
+              {
+                "id": "mat-brake-scheme",
+                "kind": "scheme",
+                "title": "Adjustment procedure",
+                "caption": "The order the steps must be done in, and why.",
+                "uri": "materials/brakes/adjust-procedure.svg",
+                "alt": "A flow of six steps from slackening the cable to the final squeeze test."
+              },
+              {
+                "id": "mat-brake-graph",
+                "kind": "graph",
+                "title": "Pad clearance against lever travel",
+                "uri": "materials/brakes/clearance.svg",
+                "alt": "A line plot: lever travel in millimetres on the x axis, stopping force on the y axis, rising then flattening."
+              },
+              {
+                "id": "mat-brake-video-adjust",
+                "kind": "video",
+                "title": "Centring the arms",
+                "uri": "video/chapter-02",
+                "video": {
+                  "chapterId": "chapter-02",
+                  "startMillis": 0,
+                  "endMillis": 305000,
+                  "transcriptAnchor": "ch02-seg-0001"
+                }
+              },
+              {
+                "id": "mat-brake-checklist",
+                "kind": "document",
+                "title": "Adjustment checklist",
+                "uri": "materials/brakes/checklist.pdf"
+              }
+            ]
+          }
+        ],
+        "assessment": {
+          "id": "asm-brakes",
+          "areaId": "area-brakes",
+          "title": "Rim brakes — end of area test",
+          "requiredLessons": ["les-brakes-anatomy", "les-brakes-adjust"],
+          "passPercent": 70,
+          "questions": [
+            {
+              "id": "q-brake-force",
+              "kind": "single",
+              "prompt": "Where does a rim brake apply its stopping force?",
+              "choices": [
+                { "id": "ch-brake-force-a", "text": "Against the braking surface of the rim" },
+                { "id": "ch-brake-force-b", "text": "Against the tyre sidewall" },
+                { "id": "ch-brake-force-c", "text": "Against the hub shell" }
+              ],
+              "correctChoices": ["ch-brake-force-a"],
+              "points": 2,
+              "explanation": "The pads clamp the rim's flat braking surface; the tyre and hub are never contacted.",
+              "ord": 1
+            },
+            {
+              "id": "q-brake-replace",
+              "kind": "multi",
+              "prompt": "Which observations mean a pad must be replaced rather than adjusted?",
+              "choices": [
+                { "id": "ch-brake-replace-a", "text": "The wear grooves are no longer visible" },
+                { "id": "ch-brake-replace-b", "text": "The pad is slightly off-centre" },
+                { "id": "ch-brake-replace-c", "text": "Metal is showing through the compound" }
+              ],
+              "correctChoices": ["ch-brake-replace-a", "ch-brake-replace-c"],
+              "points": 3,
+              "explanation": "Off-centre is an adjustment; no grooves and exposed metal are both end-of-life.",
+              "ord": 2
+            }
+          ]
+        }
+      },
+      {
+        "id": "area-drivetrain",
+        "title": "Chain and Drivetrain",
+        "ord": 2,
+        "lessons": [
+          {
+            "id": "les-chain-wear",
+            "areaId": "area-drivetrain",
+            "title": "Measuring chain wear",
+            "ord": 1,
+            "estimatedMinutes": 10,
+            "materials": [
+              {
+                "id": "mat-chain-graph",
+                "kind": "graph",
+                "title": "Chain elongation over distance",
+                "uri": "materials/drivetrain/elongation.svg",
+                "alt": "A rising curve of chain elongation percentage against kilometres ridden, with a marked replacement threshold."
+              }
+            ]
+          }
+        ],
+        "assessment": {
+          "id": "asm-drivetrain",
+          "areaId": "area-drivetrain",
+          "title": "Drivetrain — end of area test",
+          "requiredLessons": ["les-chain-wear"],
+          "passPercent": 60,
+          "questions": [
+            {
+              "id": "q-chain-threshold",
+              "kind": "single",
+              "prompt": "A worn chain is replaced before it damages which component first?",
+              "choices": [
+                { "id": "ch-chain-a", "text": "The cassette sprockets" },
+                { "id": "ch-chain-b", "text": "The saddle rails" }
+              ],
+              "correctChoices": ["ch-chain-a"],
+              "points": 1,
+              "explanation": "A stretched chain rides high on the sprocket teeth and reshapes them.",
+              "ord": 1
+            },
+            {
+              "id": "q-chain-explain",
+              "kind": "short",
+              "prompt": "In your own words, describe how you would decide that a chain has reached its replacement threshold.",
+              "points": 2,
+              "explanation": "A good answer names a measurement, a threshold, and what is checked alongside it.",
+              "ord": 2
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "chaptersDeclared": true,
+  "knownChapters": ["chapter-01", "chapter-02", "chapter-03"]
+}
