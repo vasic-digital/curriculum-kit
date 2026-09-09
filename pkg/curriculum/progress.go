@@ -36,10 +36,22 @@ type Attempt struct {
 	Points       int       `json:"points"`
 	MaxPoints    int       `json:"maxPoints"`
 	Percent      int       `json:"percent"`
-	Passed       bool      `json:"passed"`
+	// MarkedPoints and MarkedPercent are the score and its denominator over the
+	// questions that were actually marked — see Result, where the distinction
+	// and the reason for it are set out. MarkedPercent is the figure to render;
+	// Percent is a lower bound on the whole paper.
+	//
+	// A record written before this distinction existed decodes with
+	// MarkedPoints 0. That is why BestAttempt requires MarkedPoints > 0 rather
+	// than treating a zero as "scored nothing": an absent figure and a zero
+	// score are different facts, and such a record simply carries no
+	// marked-scope reading to rank.
+	MarkedPoints  int  `json:"markedPoints"`
+	MarkedPercent int  `json:"markedPercent"`
+	Passed        bool `json:"passed"`
 	// Determinate is false when the attempt contained questions this package
-	// cannot grade. Percent is then a LOWER BOUND and Passed is always false —
-	// see Result.
+	// cannot grade. Percent is then a LOWER BOUND on the whole paper — see
+	// Result. It does NOT force Passed to false.
 	Determinate bool `json:"determinate"`
 }
 
@@ -119,18 +131,30 @@ func (p *Progress) AttemptsFor(id ID) []Attempt {
 	return p.Attempts[id]
 }
 
-// BestAttempt returns the highest-scoring DETERMINATE attempt. An attempt this
-// package could not fully grade is never returned as a best result, because
-// its percent is a lower bound and reporting it as an achievement would be a
-// claim about work that was not measured.
+// BestAttempt returns the highest-scoring attempt, ranked on MarkedPercent.
+//
+// IT USED TO SKIP EVERY INDETERMINATE ATTEMPT, and that was the Result defect
+// one level down. On any assessment carrying a single free-text question every
+// attempt is indeterminate, so the filter did not select a careful best result
+// — it selected nothing, for ever, and a learner who had answered every marked
+// question correctly had no best attempt at all. Ranking on the marked scope
+// reports what was measured instead of discarding it.
+//
+// An attempt with MarkedPoints == 0 is skipped, and the two reasons are worth
+// separating: an assessment with nothing markable on it carries no reading to
+// rank, and a record written before this field existed decodes as 0 and
+// likewise carries none. Neither is a score of zero.
+//
+// Determinate is still carried on the returned attempt, because the caller must
+// be able to say that free text went unmarked.
 func (p *Progress) BestAttempt(id ID) (Attempt, bool) {
 	var best Attempt
 	found := false
 	for _, a := range p.AttemptsFor(id) {
-		if !a.Determinate {
+		if a.MarkedPoints <= 0 {
 			continue
 		}
-		if !found || a.Percent > best.Percent {
+		if !found || a.MarkedPercent > best.MarkedPercent {
 			best, found = a, true
 		}
 	}

@@ -182,9 +182,18 @@ func TestUnknownAndDuplicateResponsesAreRejected(t *testing.T) {
 	}
 }
 
-// The three-valued rule, applied to grading: a free-text question is an
-// absence of evidence, and a pass must never be awarded over one.
-func TestFreeTextMakesTheResultIndeterminateAndNeverPassing(t *testing.T) {
+// Free text is reported as unmarked and is kept OUT of the denominator of the
+// score. The result is scored over the marked scope and says so.
+//
+// This test replaces TestFreeTextMakesTheResultIndeterminateAndNeverPassing,
+// which asserted that a free-text question forces Passed to false. That rule
+// did not produce a careful result, it produced a wrong number: a learner who
+// answered every marked question correctly was told they had failed. The
+// protections that rule was reaching for are still asserted here — the outcome
+// is not claimed as graded, Determinate is false, Ungraded counts it, and
+// Percent remains a whole-paper lower bound — and the case where there is
+// genuinely nothing to measure is asserted by the control test below.
+func TestFreeTextIsExcludedFromTheMarkedScopeAndReportedAsUnmarked(t *testing.T) {
 	a, p := unlocked()
 	a.Assessment.Questions = append(a.Assessment.Questions, Question{
 		ID: "q-3", Kind: KindShort, Prompt: "Explain the difference.", Points: 1,
@@ -197,20 +206,60 @@ func TestFreeTextMakesTheResultIndeterminateAndNeverPassing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The scope of the mark is still reported honestly.
 	if res.Determinate {
 		t.Fatal("Determinate = true with an ungradable question present")
 	}
 	if res.Ungraded != 1 {
 		t.Fatalf("Ungraded = %d, want 1", res.Ungraded)
 	}
-	if res.Passed {
-		t.Fatal("Passed = true over a question nothing graded — an unmeasured pass")
-	}
-	if res.Percent != 83 { // 5 of 6, truncated
-		t.Fatalf("Percent = %d, want 83 as a LOWER BOUND", res.Percent)
-	}
 	if res.Outcomes[2].Graded {
 		t.Fatal("the free-text outcome claims to have been graded")
+	}
+	// The whole-paper figure stays a lower bound, unchanged.
+	if res.Percent != 83 { // 5 of 6, truncated
+		t.Fatalf("Percent = %d, want 83 as a whole-paper LOWER BOUND", res.Percent)
+	}
+	// The score is over the marked scope: 5 of 5, the free-text point excluded
+	// from the denominator rather than counted as lost.
+	if res.MarkedPoints != 5 {
+		t.Fatalf("MarkedPoints = %d, want 5 — the free-text point must not sit in the denominator", res.MarkedPoints)
+	}
+	if res.MarkedPercent != 100 {
+		t.Fatalf("MarkedPercent = %d, want 100 — every marked question was answered correctly", res.MarkedPercent)
+	}
+	if !res.Passed {
+		t.Fatal("Passed = false after every marked question was answered correctly")
+	}
+}
+
+// The control arm: the protection the old rule was reaching for, asserted
+// where it actually applies. A paper with NOTHING markable on it has no
+// evidence to pass on, and 100% of nothing is not a pass.
+func TestAPaperWithNothingMarkableCanNeverPass(t *testing.T) {
+	a, p := unlocked()
+	a.Assessment.Questions = []Question{
+		{ID: "q-s1", Kind: KindShort, Prompt: "Explain one.", Points: 3},
+		{ID: "q-s2", Kind: KindShort, Prompt: "Explain another.", Points: 4},
+	}
+	res, err := Submit(a, p, []Response{
+		{QuestionID: "q-s1", Text: "Some prose."},
+		{QuestionID: "q-s2", Text: "More prose."},
+	}, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.MarkedPoints != 0 {
+		t.Fatalf("MarkedPoints = %d, want 0 — nothing on this paper is markable", res.MarkedPoints)
+	}
+	if res.MarkedPercent != 0 {
+		t.Fatalf("MarkedPercent = %d, want 0 rather than 100 over an empty denominator", res.MarkedPercent)
+	}
+	if res.Passed {
+		t.Fatal("a paper with nothing markable on it passed; that is an unmeasured pass")
+	}
+	if res.Ungraded != 2 || res.Determinate {
+		t.Fatalf("Ungraded = %d, Determinate = %v; want 2 and false", res.Ungraded, res.Determinate)
 	}
 }
 

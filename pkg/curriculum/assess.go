@@ -87,22 +87,64 @@ type QuestionOutcome struct {
 }
 
 // Result is the outcome of one submission.
+//
+// THE SCORE IS REPORTED OVER THE MARKED SCOPE, AND THE SCOPE IS STATED.
+//
+// This package marks selection questions and does not mark free text. Two
+// different figures therefore exist, and collapsing them is what made an
+// earlier revision of this type report a perfect paper as a failure:
+//
+//	MarkedPoints / MarkedPercent — the questions this package ACTUALLY marked.
+//	                               This is the score. Passed is decided on it.
+//	MaxPoints    / Percent       — the whole paper, free text included. Because
+//	                               free text contributes 0 earned points against
+//	                               a non-zero denominator, Percent is a LOWER
+//	                               BOUND on the whole paper and never a score.
+//
+// Reporting Percent as the result told a learner who answered every markable
+// question correctly that they had scored 47% and failed. That is not caution,
+// it is a wrong number: it divides earned points by a denominator that includes
+// questions nothing ever attempted to earn points on. The honest report names
+// its scope — "you scored X of Y on the N questions that were marked; these M
+// are yours to review against the model answer" — which is what these fields
+// let a consumer render.
+//
+// Determinate is UNCHANGED and still means "some answers were not machine
+// marked". It is no longer allowed to force Passed to false, because a pass
+// over the marked scope is a claim about the marked scope and is true.
 type Result struct {
 	AssessmentID ID  `json:"assessmentId"`
 	Points       int `json:"points"`
 	MaxPoints    int `json:"maxPoints"`
 	// Percent is Points*100/MaxPoints, truncated. When Determinate is false it
-	// is a LOWER BOUND, not a score.
-	Percent     int  `json:"percent"`
-	PassPercent int  `json:"passPercent"`
-	Passed      bool `json:"passed"`
+	// is a LOWER BOUND on the whole paper, not a score. Render MarkedPercent.
+	Percent     int `json:"percent"`
+	PassPercent int `json:"passPercent"`
+	// MarkedPoints is the points available on the questions this package marked
+	// — the denominator of the score. It excludes every question left to
+	// self-review, so it is the only denominator the learner was actually
+	// scored against.
+	MarkedPoints int `json:"markedPoints"`
+	// MarkedPercent is Points*100/MarkedPoints, truncated: the score, over a
+	// stated scope. It is 0 when MarkedPoints is 0, which is the case of a
+	// paper with nothing markable on it — see Passed.
+	MarkedPercent int `json:"markedPercent"`
+	// Passed is decided on MarkedPercent against PassPercent.
+	//
+	// A paper with NOTHING markable on it (MarkedPoints == 0) can never pass.
+	// That is not the old defect returning: there is no evidence at all to pass
+	// on, so a pass would be a claim about a measurement that did not happen.
+	// It differs from the old rule precisely because a paper with SOME markable
+	// questions is now judged on them instead of being refused outright.
+	Passed bool `json:"passed"`
 	// Determinate is false when at least one question could not be graded by
-	// this package. Passed is then ALWAYS false: an ungraded question is an
-	// absence of evidence, and awarding a pass over one would be reporting a
-	// result nobody measured.
+	// this package — today, every KindShort question. It reports the SCOPE of
+	// the mark, and a consumer must surface it: a learner shown a pass without
+	// being told free text went unmarked has been misinformed just as surely as
+	// one shown a lower bound as a score.
 	Determinate bool `json:"determinate"`
 	// Ungraded counts the questions in that state, so a consumer can say how
-	// many answers still need a human.
+	// many answers are the learner's own to review.
 	Ungraded int               `json:"ungraded"`
 	Outcomes []QuestionOutcome `json:"outcomes"`
 	At       time.Time         `json:"at"`
@@ -111,13 +153,15 @@ type Result struct {
 // Attempt converts a result into the record kept in Progress.
 func (r Result) Attempt() Attempt {
 	return Attempt{
-		AssessmentID: r.AssessmentID,
-		At:           r.At,
-		Points:       r.Points,
-		MaxPoints:    r.MaxPoints,
-		Percent:      r.Percent,
-		Passed:       r.Passed,
-		Determinate:  r.Determinate,
+		AssessmentID:  r.AssessmentID,
+		At:            r.At,
+		Points:        r.Points,
+		MaxPoints:     r.MaxPoints,
+		Percent:       r.Percent,
+		MarkedPoints:  r.MarkedPoints,
+		MarkedPercent: r.MarkedPercent,
+		Passed:        r.Passed,
+		Determinate:   r.Determinate,
 	}
 }
 
@@ -160,6 +204,9 @@ func Grade(as Assessment, responses []Response, now time.Time) (Result, error) {
 			// Not a failure and not a pass: this package has no way to judge
 			// prose, and pretending otherwise is the whole defect class the
 			// three-valued rule exists to prevent.
+			//
+			// Its points are deliberately NOT added to MarkedPoints. A question
+			// nothing tried to mark must not sit in the denominator of the mark.
 			out.Graded = false
 			res.Ungraded++
 			res.Determinate = false
@@ -167,6 +214,7 @@ func Grade(as Assessment, responses []Response, now time.Time) (Result, error) {
 			continue
 		}
 		out.Graded = true
+		res.MarkedPoints += q.Points
 		if answered && sameSet(r.Chosen, q.CorrectChoices) {
 			out.Correct = true
 			out.Points = q.Points
@@ -178,10 +226,20 @@ func Grade(as Assessment, responses []Response, now time.Time) (Result, error) {
 	if res.MaxPoints > 0 {
 		res.Percent = res.Points * 100 / res.MaxPoints
 	}
-	// A pass needs BOTH a determinate mark and the threshold. A zero-question
-	// assessment has MaxPoints 0 and can never pass, which is why Percent stays
-	// 0 rather than being defined as 100 for an empty denominator.
-	res.Passed = res.Determinate && res.MaxPoints > 0 && res.Percent >= as.PassPercent
+	if res.MarkedPoints > 0 {
+		res.MarkedPercent = res.Points * 100 / res.MarkedPoints
+	}
+	// The pass is decided over the MARKED scope and the threshold.
+	//
+	// An assessment with nothing markable on it has MarkedPoints 0 and can
+	// never pass, which is why MarkedPercent stays 0 rather than being defined
+	// as 100 for an empty denominator — 100% of nothing is not a pass, it is an
+	// absence of evidence. Determinate is deliberately NOT a term here: it
+	// describes the scope of the mark, and a consumer must render it, but a
+	// correct answer to every marked question is a pass over those questions
+	// and refusing to say so was reporting a wrong number rather than a careful
+	// one.
+	res.Passed = res.MarkedPoints > 0 && res.MarkedPercent >= as.PassPercent
 	return res, nil
 }
 

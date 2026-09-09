@@ -100,19 +100,35 @@ func TestProgressPersistsToAFileAndBack(t *testing.T) {
 	}
 }
 
-// An attempt this package could not fully grade must never be reported as a
-// best result: its percent is a lower bound, and offering it as an achievement
-// would be a claim about work nothing measured.
-func TestBestAttemptIgnoresIndeterminateAttempts(t *testing.T) {
+// BestAttempt ranks on the MARKED scope, and an indeterminate attempt is
+// eligible.
+//
+// This replaces TestBestAttemptIgnoresIndeterminateAttempts. Skipping every
+// indeterminate attempt did not select a careful best result: on any
+// assessment carrying one free-text question EVERY attempt is indeterminate,
+// so it selected nothing at all, permanently.
+func TestBestAttemptRanksOnTheMarkedScope(t *testing.T) {
 	p := NewProgress()
-	p.RecordAttempt(Attempt{AssessmentID: "a", Percent: 95, Determinate: false})
-	if _, ok := p.BestAttempt("a"); ok {
-		t.Fatal("an indeterminate attempt was returned as the best result")
-	}
-	p.RecordAttempt(Attempt{AssessmentID: "a", Percent: 61, Determinate: true, Passed: true})
+	p.RecordAttempt(Attempt{AssessmentID: "a", Percent: 40, MarkedPoints: 5, MarkedPercent: 60, Determinate: false})
+	p.RecordAttempt(Attempt{AssessmentID: "a", Percent: 55, MarkedPoints: 5, MarkedPercent: 100, Determinate: false, Passed: true})
 	best, ok := p.BestAttempt("a")
-	if !ok || best.Percent != 61 {
-		t.Fatalf("best = %+v, ok = %v; want the 61%% determinate attempt", best, ok)
+	if !ok {
+		t.Fatal("no best attempt over two indeterminate attempts that were both marked")
+	}
+	if best.MarkedPercent != 100 {
+		t.Fatalf("best.MarkedPercent = %d, want 100 — ranked on the marked scope, not on Percent", best.MarkedPercent)
+	}
+}
+
+// The control arm: an attempt carrying no marked-scope reading is not
+// rankable. That covers both a paper with nothing markable on it and a record
+// written before MarkedPoints existed, which decodes as 0. Neither is a score
+// of zero, and neither may be offered as an achievement.
+func TestBestAttemptSkipsAttemptsWithNoMarkedReading(t *testing.T) {
+	p := NewProgress()
+	p.RecordAttempt(Attempt{AssessmentID: "a", Percent: 95, MarkedPoints: 0, Determinate: false})
+	if _, ok := p.BestAttempt("a"); ok {
+		t.Fatal("an attempt with no marked-scope reading was returned as the best result")
 	}
 }
 
