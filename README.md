@@ -117,8 +117,33 @@ that is not one of the choices · `CK016` single-answer question without exactly
 one answer · `CK017` multi question with no answer · `CK018` free text carrying
 choices · `CK019` empty required text · `CK020` unknown question kind · `CK021`
 area with no assessment · `CK022` question worth nothing · `CK023` visual
-material with no alt text · `CK024` anchor into an unknown chapter ·
+material with no alt text · `CK024` anchor into an unknown chapter · `CK025`
+choice question carrying a free-text model answer ·
 **`CK900`** chapter registry not supplied — *undetermined, not a finding*.
+
+### `explanation` and `answer` are two channels, not one
+
+A question carries an after-submission note, and which field it belongs in is
+decided by the question's kind rather than by a producer's habit:
+
+- **`explanation`** — why the KEY is the key. It belongs to a question this
+  package can mark, i.e. a choice question.
+- **`answer`** — the MODEL ANSWER a `short` question's prose is compared
+  against. `Grade` never marks it (`graded: false`), and carries it into
+  `QuestionOutcome.Answer` so a consumer can show it beside the learner's own
+  `Response.Text`.
+
+**Both are carried; neither is a substitute for the other, and `CK025` enforces
+the half that can be enforced.** `answer` was added because the alternative was
+one channel doing two jobs: with nowhere else to put it, a producer packed a
+short question's model answer into `explanation`, which is coherent — that IS
+the after-submission channel — but leaves the two indistinguishable downstream.
+A count of "questions with a model answer" taken over `explanation` then reads
+the choice-question channel, which is dead data on a `short` item, and reports a
+bank whose every short question has an answer as one where almost none do. That
+measurement was actually made and was wrong. The reverse case is a finding
+rather than a convention: `CK025` fires on a choice question carrying `answer`,
+because prose written for a question that has a key ships beside that key.
 
 ## Gates
 

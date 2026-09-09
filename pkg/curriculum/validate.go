@@ -114,6 +114,7 @@ const (
 	CodeNonPositivePoints  = "CK022"
 	CodeMissingAlt         = "CK023"
 	CodeUnknownChapter     = "CK024"
+	CodeChoiceHasAnswer    = "CK025"
 	CodeChaptersUnresolved = "CK900" // undetermined, not a finding
 )
 
@@ -315,6 +316,16 @@ func (v *validator) question(q Question, path string) {
 				"free-text question carries choices — it would be presented as a picker and graded as one")
 		}
 		return
+	}
+
+	// Answer is the free-text model answer. On a choice question it is a
+	// category error with a real cost: Grade carries Answer into the outcome
+	// unconditionally, so prose written for a question that HAS a key ships
+	// beside that key and is liable to restate it. Explanation is the channel
+	// for a choice question; this one is not.
+	if q.Answer != "" {
+		v.find(CodeChoiceHasAnswer, path,
+			fmt.Sprintf("question of kind %q carries a free-text model answer — that channel is %q's; use explanation here", q.Kind, KindShort))
 	}
 
 	if len(q.Choices) < 2 {

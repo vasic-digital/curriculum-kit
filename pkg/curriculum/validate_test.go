@@ -203,3 +203,100 @@ func hasCode(r Report, code string) bool {
 	}
 	return false
 }
+
+// --- Question.Answer: the free-text model-answer channel --------------------
+//
+// §1.1 paired mutation. Every assertion below comes in two arms: a CONTROL that
+// must stay green on well-formed data, and a MUTATION that must go red. A check
+// with only the first arm cannot tell "nothing is wrong" from "nothing is
+// looked at", which is the defect class CK025 was written under.
+
+// CONTROL. A free-text question carrying a model answer is well-formed and must
+// validate clean — the field is not merely tolerated, it is the intended home.
+func TestShortQuestionMayCarryAModelAnswer(t *testing.T) {
+	c := goodCatalog()
+	c.Areas[0].Assessment.Questions = append(c.Areas[0].Assessment.Questions,
+		Question{ID: "q-3", Kind: KindShort, Points: 4,
+			Prompt: "Why does a stopper knot belong at the end of a rope?",
+			Answer: "Because the rope's own end is the failure it prevents: without one the tail runs back through the hardware under load."})
+
+	rep := ValidateWith(c, chapters("ch1"))
+	if v := rep.Verdict(); v != 0 {
+		t.Fatalf("verdict = %d, want 0; findings: %v", v, rep.Findings)
+	}
+	if hasCode(rep, CodeChoiceHasAnswer) {
+		t.Fatalf("%s fired on a free-text question, which is exactly where the field belongs", CodeChoiceHasAnswer)
+	}
+}
+
+// MUTATION. The same field on a choice question must be caught. Without this
+// arm the CONTROL above would pass just as happily against a validator that
+// never reads Answer at all.
+func TestChoiceQuestionCarryingAModelAnswerIsAFinding(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		kind QuestionKind
+		idx  int
+	}{
+		{"single", KindSingle, 0},
+		{"multi", KindMulti, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := goodCatalog()
+			q := &c.Areas[0].Assessment.Questions[tc.idx]
+			if q.Kind != tc.kind {
+				t.Fatalf("fixture drift: question %d is kind %q, want %q", tc.idx, q.Kind, tc.kind)
+			}
+			q.Answer = "The figure eight, because its extra turn spreads the load."
+
+			rep := ValidateWith(c, chapters("ch1"))
+			if rep.Verdict() != 1 {
+				t.Fatalf("verdict = %d, want 1; findings: %v", rep.Verdict(), rep.Findings)
+			}
+			if !hasCode(rep, CodeChoiceHasAnswer) {
+				t.Fatalf("want %s, got %v", CodeChoiceHasAnswer, rep.Findings)
+			}
+		})
+	}
+}
+
+// Answer must reach the learner-facing outcome. A KindShort question is never
+// Graded, so this carry is the ONLY thing that makes its outcome actionable —
+// and it is asserted rather than assumed, because "carried through" is the sort
+// of claim that survives a refactor in prose long after it stops being true.
+func TestGradeCarriesTheModelAnswerIntoTheOutcome(t *testing.T) {
+	const model = "The rope's own end is the failure it prevents."
+	as := Assessment{
+		ID: "asm-1", AreaID: "area-1", Title: "t",
+		RequiredLessons: []ID{"les-1"}, PassPercent: 50,
+		Questions: []Question{
+			{ID: "q-1", Kind: KindSingle, Prompt: "Which resists jamming?", Points: 2,
+				Choices:        []Choice{{ID: "c-1", Text: "Figure eight"}, {ID: "c-2", Text: "Overhand"}},
+				CorrectChoices: []ID{"c-1"}, Explanation: "Its extra turn spreads the load."},
+			{ID: "q-2", Kind: KindShort, Prompt: "Why?", Points: 4, Answer: model},
+		},
+	}
+	res, err := Grade(as, []Response{{QuestionID: "q-1", Chosen: []ID{"c-1"}}, {QuestionID: "q-2", Text: "some prose"}}, at)
+	if err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+
+	byID := map[ID]QuestionOutcome{}
+	for _, o := range res.Outcomes {
+		byID[o.QuestionID] = o
+	}
+	short := byID["q-2"]
+	if short.Graded {
+		t.Fatal("the free-text question was marked Graded; this package cannot judge prose")
+	}
+	if short.Answer != model {
+		t.Fatalf("outcome Answer = %q, want the authored model answer", short.Answer)
+	}
+	// The two channels must not have been merged back into one on the way out.
+	if choice := byID["q-1"]; choice.Answer != "" {
+		t.Fatalf("choice outcome carried Answer %q; that channel is the free-text question's", choice.Answer)
+	}
+	if short.Explanation != "" {
+		t.Fatalf("free-text outcome carried Explanation %q from nowhere", short.Explanation)
+	}
+}

@@ -82,6 +82,15 @@ type QuestionOutcome struct {
 	// show a learner why — which is what makes a result something to act on
 	// rather than a number.
 	Explanation string `json:"explanation,omitempty"`
+	// Answer is the authored MODEL ANSWER for a KindShort question, carried
+	// through for the same reason and separately from Explanation.
+	//
+	// It is what makes an ungraded outcome useful rather than merely honest.
+	// Graded is false for every KindShort question, so without this the learner
+	// is told only that nothing marked their prose. With it, the consumer can
+	// render the sentence Result's doc comment promises — "these M are yours to
+	// review against the model answer" — and actually show the model answer.
+	Answer string `json:"answer,omitempty"`
 	// ExpectedChoices is the correct set, carried through for the same reason.
 	ExpectedChoices []ID `json:"expectedChoices,omitempty"`
 }
@@ -198,6 +207,7 @@ func Grade(as Assessment, responses []Response, now time.Time) (Result, error) {
 			MaxPoints:       q.Points,
 			Answered:        answered,
 			Explanation:     q.Explanation,
+			Answer:          q.Answer,
 			ExpectedChoices: append([]ID(nil), q.CorrectChoices...),
 		}
 		if q.Kind == KindShort {

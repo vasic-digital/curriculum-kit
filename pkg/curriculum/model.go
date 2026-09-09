@@ -224,9 +224,32 @@ type Question struct {
 	// answer, which an index does.
 	CorrectChoices []ID `json:"correctChoices,omitempty"`
 	// Points is this question's weight. It must be positive.
-	Points      int    `json:"points"`
+	Points int `json:"points"`
+	// Explanation is why the KEY is the key: the note shown after a submission
+	// that turns a mark into something a learner can act on. It belongs to a
+	// question this package can actually mark, i.e. a choice question.
 	Explanation string `json:"explanation,omitempty"`
-	Ord         int    `json:"ord"`
+	// Answer is the MODEL ANSWER for a KindShort question — the prose a learner
+	// is asked to write, shown after submission so they have something to
+	// compare their own attempt against.
+	//
+	// IT EXISTS BECAUSE THE ALTERNATIVE WAS ONE CHANNEL DOING TWO JOBS, AND
+	// THAT COST A WRONG MEASUREMENT. Before this field, a free-text question's
+	// model answer had nowhere to go, so producers packed it into Explanation —
+	// coherent, since Explanation is the after-submission channel, but it made
+	// the two things indistinguishable downstream. A count of "questions with a
+	// model answer" taken over Explanation therefore reads the CHOICE-question
+	// channel, which is dead data on a KindShort item, and reports a bank whose
+	// every short question has an answer as one where almost none do. That
+	// happened. Two fields cannot be confused for one another; one overloaded
+	// field can only be disambiguated by knowing the producer's convention,
+	// which is not a property of the data.
+	//
+	// This package does not grade against it — Grade cannot judge prose, and a
+	// model answer is not a key. It is carried so a consumer can put it in
+	// front of a human, alongside the learner's own Response.Text.
+	Answer string `json:"answer,omitempty"`
+	Ord    int    `json:"ord"`
 }
 
 // Assessment is the end-of-area test.
